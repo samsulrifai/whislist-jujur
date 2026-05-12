@@ -2,6 +2,10 @@
 
 Anti-impulsive buying MVP: cek barang sebelum checkout, dapat tier S/A/B/C/D, simpan wishlist, dan hitung uang yang terselamatkan.
 
+## Screenshot
+
+![Wishlist Jujur dashboard](docs/screenshot-dashboard.png)
+
 ## Stack
 
 - React

@@ -134,6 +134,31 @@ function hasAllAnswers(answers: Partial<ScoringAnswers>): answers is ScoringAnsw
   );
 }
 
+function buildChatGptPrompt(item: WishlistItem): string {
+  const productLink = item.productLink ? `\nLink produk: ${item.productLink}` : '';
+  const userReason = item.userReason ? item.userReason : 'Belum ada alasan tertulis.';
+  const reasons = item.reasonBreakdown.map((reason) => `- ${reason}`).join('\n');
+
+  return `Kamu adalah asisten belanja yang jujur, kritis, dan hemat. Tolong audit keputusan belanja ini dengan gaya santai tapi tajam.\n\nData barang:\nNama: ${item.name}\nHarga: ${formatIDR(item.price)}\nKategori: ${item.category}${productLink}\nAlasan saya ingin beli: ${userReason}\n\nHasil scoring dari Wishlist Jujur:\nTier: ${item.tier} - ${item.tierLabel}\nSkor: ${item.score}/${item.maxScore}\nCooldown: ${formatCooldown(item.cooldownUntil)}\nStatus sekarang: ${statusLabels[item.status]}\n\nAlasan scoring:\n${reasons}\n\nTolong jawab dalam Bahasa Indonesia dengan format:\n1. Verdict singkat: beli sekarang / tunda / jangan beli dulu\n2. Risiko terbesar kalau saya beli\n3. Pertanyaan jujur yang harus saya jawab sebelum checkout\n4. Alternatif lebih hemat atau lebih masuk akal\n5. Kesimpulan maksimal 2 kalimat.`;
+}
+
+async function copyTextToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  textarea.remove();
+}
+
 function App() {
   const [state, setState] = useState<WishlistState>(() => loadState());
   const [isAdding, setIsAdding] = useState(false);
@@ -235,6 +260,15 @@ function App() {
     setToast('Simulasi AI Check dipakai. Belum memanggil API apa pun — aman dari biaya.');
   }
 
+  async function copyPromptForItem(item: WishlistItem) {
+    try {
+      await copyTextToClipboard(buildChatGptPrompt(item));
+      setToast(`Prompt ChatGPT untuk ${item.name} sudah dicopy.`);
+    } catch {
+      setToast('Gagal copy otomatis. Browser kamu memblokir clipboard.');
+    }
+  }
+
   function markStatus(itemId: string, status: ItemStatus) {
     const now = new Date().toISOString();
     let changedItem: WishlistItem | undefined;
@@ -293,9 +327,9 @@ function App() {
 
       <section className="pro-stub card-ink">
         <div>
-          <p className="eyebrow">Pro AI Stub</p>
-          <h2>AI-nya belum nyala. Sengaja.</h2>
-          <p>MVP ini tidak memanggil API berbayar. Slot AI cuma simulasi paywall/trial untuk validasi konsep sebelum login, payment, dan backend dibuat.</p>
+          <p className="eyebrow">AI Bridge</p>
+          <h2>AI-nya belum nyala. Tapi prompt-nya sudah siap.</h2>
+          <p>Belum ada API berbayar. Pakai tombol <strong>Copy Prompt</strong> di tiap barang, lalu paste ke ChatGPT untuk second opinion yang lebih detail.</p>
         </div>
         <button className="btn btn-secondary" type="button" onClick={useAiStub}>Coba AI Check Stub</button>
       </section>
@@ -343,7 +377,7 @@ function App() {
         ) : state.settings.preferredView === 'flatList' ? (
           <div className="item-grid">
             {filteredItems.map((item) => (
-              <ItemCard key={item.id} item={item} onEdit={() => setEditingItem(item)} onBought={() => markStatus(item.id, 'bought')} onCancelled={() => markStatus(item.id, 'cancelled')} onDelayed={() => markStatus(item.id, 'delayed')} onDelete={() => deleteItem(item.id)} />
+              <ItemCard key={item.id} item={item} onEdit={() => setEditingItem(item)} onCopyPrompt={() => copyPromptForItem(item)} onBought={() => markStatus(item.id, 'bought')} onCancelled={() => markStatus(item.id, 'cancelled')} onDelayed={() => markStatus(item.id, 'delayed')} onDelete={() => deleteItem(item.id)} />
             ))}
           </div>
         ) : (
@@ -359,7 +393,7 @@ function App() {
                   </div>
                   <div className="item-grid">
                     {items.map((item) => (
-                      <ItemCard key={item.id} item={item} onEdit={() => setEditingItem(item)} onBought={() => markStatus(item.id, 'bought')} onCancelled={() => markStatus(item.id, 'cancelled')} onDelayed={() => markStatus(item.id, 'delayed')} onDelete={() => deleteItem(item.id)} />
+                      <ItemCard key={item.id} item={item} onEdit={() => setEditingItem(item)} onCopyPrompt={() => copyPromptForItem(item)} onBought={() => markStatus(item.id, 'bought')} onCancelled={() => markStatus(item.id, 'cancelled')} onDelayed={() => markStatus(item.id, 'delayed')} onDelete={() => deleteItem(item.id)} />
                     ))}
                   </div>
                 </section>
@@ -373,8 +407,8 @@ function App() {
         + Cek Barang
       </button>
 
-      {isAdding && <AddItemFlow onClose={() => setIsAdding(false)} onSave={addItem} />}
-      {editingItem && <AddItemFlow mode="edit" initialItem={editingItem} onClose={() => setEditingItem(null)} onSave={updateItem} />}
+      {isAdding && <AddItemFlow onClose={() => setIsAdding(false)} onSave={addItem} onCopyPrompt={copyPromptForItem} />}
+      {editingItem && <AddItemFlow mode="edit" initialItem={editingItem} onClose={() => setEditingItem(null)} onSave={updateItem} onCopyPrompt={copyPromptForItem} />}
       {isSettingsOpen && (
         <SettingsPanel
           state={state}
@@ -492,7 +526,23 @@ function SettingsPanel({
   );
 }
 
-function ItemCard({ item, onEdit, onBought, onCancelled, onDelayed, onDelete }: { item: WishlistItem; onEdit: () => void; onBought: () => void; onCancelled: () => void; onDelayed: () => void; onDelete: () => void }) {
+function ItemCard({
+  item,
+  onEdit,
+  onCopyPrompt,
+  onBought,
+  onCancelled,
+  onDelayed,
+  onDelete,
+}: {
+  item: WishlistItem;
+  onEdit: () => void;
+  onCopyPrompt: () => void;
+  onBought: () => void;
+  onCancelled: () => void;
+  onDelayed: () => void;
+  onDelete: () => void;
+}) {
   return (
     <article className={`item-card tier-${item.tier.toLowerCase()}`}>
       <div className="item-topline">
@@ -510,6 +560,7 @@ function ItemCard({ item, onEdit, onBought, onCancelled, onDelayed, onDelete }: 
       </div>
       <div className="card-actions">
         <button className="mini-button edit" type="button" onClick={onEdit}>Edit</button>
+        <button className="mini-button ai-action" type="button" onClick={onCopyPrompt}>Copy Prompt</button>
         <button className="mini-button" type="button" onClick={onBought}>Dibeli</button>
         <button className="mini-button positive" type="button" onClick={onCancelled}>Batal Beli</button>
         <button className="mini-button" type="button" onClick={onDelayed}>Tunda</button>
@@ -522,11 +573,13 @@ function ItemCard({ item, onEdit, onBought, onCancelled, onDelayed, onDelete }: 
 function AddItemFlow({
   onClose,
   onSave,
+  onCopyPrompt,
   mode = 'add',
   initialItem,
 }: {
   onClose: () => void;
   onSave: (item: WishlistItem) => void;
+  onCopyPrompt: (item: WishlistItem) => void;
   mode?: 'add' | 'edit';
   initialItem?: WishlistItem;
 }) {
@@ -693,6 +746,7 @@ function AddItemFlow({
             </div>
             <div className="button-row">
               <button className="btn btn-secondary" type="button" onClick={() => setStep(2)}>Ubah Jawaban</button>
+              <button className="btn btn-secondary" type="button" onClick={() => onCopyPrompt(result)}>Copy Prompt ke ChatGPT</button>
               <button className="btn btn-primary" type="button" onClick={save}>{isEdit ? 'Simpan Perubahan' : 'Simpan ke Wishlist'}</button>
             </div>
           </div>

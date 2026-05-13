@@ -440,6 +440,11 @@ h3 {
   color: var(--ink);
 }
 
+.mini-button.ai-action {
+  background: #e9eeff;
+  color: var(--ai);
+}
+
 .mini-button.ghost {
   background: transparent;
   color: var(--ink-muted);

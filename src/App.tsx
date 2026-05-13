@@ -138,7 +138,7 @@ function buildChatGptPrompt(item: WishlistItem): string {
   const userReason = item.userReason ? item.userReason : 'nggak nulis alasan, mencurigakan.';
   const strongestReason = item.reasonBreakdown[0] ?? 'sinyalnya belum jelas.';
 
-  return `Jawab pakai Bahasa Indonesia santai, pedas, dan super singkat. Roast keputusan belanjanya, bukan orangnya. Maksimal 4 bullet. Tiap bullet maksimal 1 kalimat pendek.\n\nBarang: ${item.name}\nHarga: ${formatIDR(item.price)}\nAlasan beli: ${userReason}\nTier app: ${item.tier} (${item.tierLabel}), skor ${item.score}/${item.maxScore}\nSinyal: ${strongestReason}\n\nFormat wajib:\n- Verdict: beli / tunda / skip\n- Roasting: satu sentilan lucu\n- Alasan: kenapa begitu\n- Aksi: lakukan apa sekarang`;
+  return `Jawab pakai Bahasa Indonesia santai, pedas, dan super singkat. Hasil akhir wajib 1 paragraf saja, 1-2 kalimat pendek, tanpa bullet/nomor/judul. Roast keputusan belanjanya, bukan orangnya. Harus tetap ada verdict beli/tunda/skip, satu sentilan lucu, alasan singkat, dan aksi sekarang.\n\nBarang: ${item.name}\nHarga: ${formatIDR(item.price)}\nAlasan beli: ${userReason}\nTier app: ${item.tier} (${item.tierLabel}), skor ${item.score}/${item.maxScore}\nSinyal: ${strongestReason}`;
 }
 
 async function copyTextToClipboard(text: string): Promise<void> {

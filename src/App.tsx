@@ -135,10 +135,10 @@ function hasAllAnswers(answers: Partial<ScoringAnswers>): answers is ScoringAnsw
 }
 
 function buildChatGptPrompt(item: WishlistItem): string {
-  const userReason = item.userReason ? item.userReason : 'Belum ada alasan tertulis.';
-  const strongestReason = item.reasonBreakdown[0] ?? 'Belum ada alasan scoring.';
+  const userReason = item.userReason ? item.userReason : 'nggak nulis alasan, mencurigakan.';
+  const strongestReason = item.reasonBreakdown[0] ?? 'sinyalnya belum jelas.';
 
-  return `Jawab singkat dalam Bahasa Indonesia. Maksimal 5 bullet, tanpa paragraf panjang.\n\nSaya mau beli:\n- Barang: ${item.name}\n- Harga: ${formatIDR(item.price)}\n- Alasan saya: ${userReason}\n- Hasil Wishlist Jujur: ${item.tier} Tier (${item.tierLabel}), skor ${item.score}/${item.maxScore}\n- Sinyal utama: ${strongestReason}\n\nFormat jawaban:\n- Verdict: beli / tunda / jangan beli dulu\n- Kenapa: 1 alasan utama\n- Risiko: 1 risiko terbesar\n- Aksi: 1 langkah paling masuk akal sekarang\n- Kalimat penutup: maksimal 10 kata`;
+  return `Jawab pakai Bahasa Indonesia santai, pedas, dan super singkat. Roast keputusan belanjanya, bukan orangnya. Maksimal 4 bullet. Tiap bullet maksimal 1 kalimat pendek.\n\nBarang: ${item.name}\nHarga: ${formatIDR(item.price)}\nAlasan beli: ${userReason}\nTier app: ${item.tier} (${item.tierLabel}), skor ${item.score}/${item.maxScore}\nSinyal: ${strongestReason}\n\nFormat wajib:\n- Verdict: beli / tunda / skip\n- Roasting: satu sentilan lucu\n- Alasan: kenapa begitu\n- Aksi: lakukan apa sekarang`;
 }
 
 async function copyTextToClipboard(text: string): Promise<void> {

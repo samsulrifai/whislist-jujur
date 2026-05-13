@@ -135,11 +135,10 @@ function hasAllAnswers(answers: Partial<ScoringAnswers>): answers is ScoringAnsw
 }
 
 function buildChatGptPrompt(item: WishlistItem): string {
-  const productLink = item.productLink ? `\nLink produk: ${item.productLink}` : '';
   const userReason = item.userReason ? item.userReason : 'Belum ada alasan tertulis.';
-  const reasons = item.reasonBreakdown.map((reason) => `- ${reason}`).join('\n');
+  const strongestReason = item.reasonBreakdown[0] ?? 'Belum ada alasan scoring.';
 
-  return `Kamu adalah asisten belanja yang jujur, kritis, dan hemat. Tolong audit keputusan belanja ini dengan gaya santai tapi tajam.\n\nData barang:\nNama: ${item.name}\nHarga: ${formatIDR(item.price)}\nKategori: ${item.category}${productLink}\nAlasan saya ingin beli: ${userReason}\n\nHasil scoring dari Wishlist Jujur:\nTier: ${item.tier} - ${item.tierLabel}\nSkor: ${item.score}/${item.maxScore}\nCooldown: ${formatCooldown(item.cooldownUntil)}\nStatus sekarang: ${statusLabels[item.status]}\n\nAlasan scoring:\n${reasons}\n\nTolong jawab dalam Bahasa Indonesia dengan format:\n1. Verdict singkat: beli sekarang / tunda / jangan beli dulu\n2. Risiko terbesar kalau saya beli\n3. Pertanyaan jujur yang harus saya jawab sebelum checkout\n4. Alternatif lebih hemat atau lebih masuk akal\n5. Kesimpulan maksimal 2 kalimat.`;
+  return `Jawab singkat dalam Bahasa Indonesia. Maksimal 5 bullet, tanpa paragraf panjang.\n\nSaya mau beli:\n- Barang: ${item.name}\n- Harga: ${formatIDR(item.price)}\n- Alasan saya: ${userReason}\n- Hasil Wishlist Jujur: ${item.tier} Tier (${item.tierLabel}), skor ${item.score}/${item.maxScore}\n- Sinyal utama: ${strongestReason}\n\nFormat jawaban:\n- Verdict: beli / tunda / jangan beli dulu\n- Kenapa: 1 alasan utama\n- Risiko: 1 risiko terbesar\n- Aksi: 1 langkah paling masuk akal sekarang\n- Kalimat penutup: maksimal 10 kata`;
 }
 
 async function copyTextToClipboard(text: string): Promise<void> {
